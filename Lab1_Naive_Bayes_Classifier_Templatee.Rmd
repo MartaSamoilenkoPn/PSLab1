@@ -153,7 +153,7 @@ test <-  read.csv(file = test_path, stringsAsFactors = FALSE)
 # note the power functional features of R bring us! 
 train
 tidy_text <- unnest_tokens(train, 'splitted', 'text', token="words") %>%
-             filter(!splitted %in% stop_words)
+             filter(!splitted %in% splitted_stop_words)
 
 tidy_text %>% count(splitted,sort=TRUE)
 ```
@@ -190,6 +190,7 @@ naiveBayes <- setRefClass("naiveBayes",
                       #count probability for each author's rows
                       prob_lovecraft <<- n_loveraft / n_overall
                       prob_edgardpoe <<- n_edgardPoe / n_overall
+                      print(n_Wollstonecraft)
                       prob_Wollstonecraft <<- n_Wollstonecraft / n_overall
                       
                       #filter text of each author and cound all word
@@ -199,7 +200,7 @@ naiveBayes <- setRefClass("naiveBayes",
                       tidy_edgardpoe <- tidy_text %>% filter(tidy_text$author=="Edgar Alan Poe")
                       counts_edgardpoe <- tidy_edgardpoe %>% count(splitted, sort = TRUE)
                       
-                      tidy_wollstonecraft <- tidy_text %>% filter(tidy_text$author=="Mary Wollstonecraft Shelley")
+                      tidy_wollstonecraft <- tidy_text %>% filter(tidy_text$author=="Mary Wollstonecraft Shelley ")
                       counts_wollstonecraft <- tidy_wollstonecraft %>% count(splitted, sort = TRUE)
                       
                       #Merge count of each author with all text
@@ -211,7 +212,6 @@ naiveBayes <- setRefClass("naiveBayes",
                       counts_tidy <<- merge(counts_wollstonecraft, counts_tidy, by = "splitted", all = TRUE)
                       colnames(counts_tidy)[colnames(counts_tidy) == "n"] <<- "n_Wollstonecraft"
                       
-                      #for null counts_tidy set as 0
                       counts_tidy[is.na(counts_tidy)] <<- 0
                           
                       #for each word add 1
@@ -220,15 +220,16 @@ naiveBayes <- setRefClass("naiveBayes",
                       counts_tidy$n_Wollstonecraft <<- counts_tidy$n_Wollstonecraft + 1
                       
                       #Count sum of all words
-                      sum_lovecraft <- sum(counts_tidy $n_lovecraft)
-                      sum_edgardPoe <- sum(counts_tidy $n_edgardPoe)
-                      sum_Wollstonecraft <- sum(counts_tidy $n_Wollstonecraft)
+                      sum_all <- sum(counts_tidy$n_overall)
+                      sum_lovecraft <- sum(counts_tidy$n_lovecraft)
+                      sum_edgardPoe <- sum(counts_tidy$n_edgardPoe)
+                      sum_Wollstonecraft <- sum(counts_tidy$n_Wollstonecraft)
                       
                       #Count its probability
                       
-                      counts_tidy$probs_lovecraft <<- counts_tidy$n_lovecraft / sum_lovecraft
-                      counts_tidy$probs_edgardpoe <<- counts_tidy$n_edgardPoe / sum_edgardPoe
-                      counts_tidy$probs_Wollstonecraft <<- counts_tidy$n_Wollstonecraft / sum_Wollstonecraft
+                      counts_tidy$probs_lovecraft <<- counts_tidy$n_lovecraft / (sum_lovecraft + sum_all)
+                      counts_tidy$probs_edgardpoe <<- counts_tidy$n_edgardPoe / (sum_edgardPoe + sum_all)
+                      counts_tidy$probs_Wollstonecraft <<- counts_tidy$n_Wollstonecraft / (sum_Wollstonecraft + sum_all)
                     },
                     
                     # return prediction for a single message 
@@ -238,53 +239,41 @@ naiveBayes <- setRefClass("naiveBayes",
                       received <- unnest_tokens(message, 'splitted', 'Message', token="words") %>%
              filter(!splitted %in% stop_words)
                       
-                      start_prob_loveraft = 1
+                      start_prob_lovecraft = 1
                       start_prob_edgardPoe = 1
                       start_prob_Wollstonecraft = 1
-                      
+                      #print(counts_tidy)
                       for (word in received$splitted) {
                         if (word %in% counts_tidy$splitted) {
-                          start_prob_loveraft = start_prob_loveraft * counts_tidy[which(counts_tidy$splitted == word), 5]
-                        }
-                        else {
-                          start_prob_loveraft = start_prob_loveraft * 1/(2 * nrow(counts_tidy))
-                        }
-                      }
+                          start_prob_lovecraft = start_prob_lovecraft * counts_tidy[which(counts_tidy$splitted == word), 6]
+                        }}
+                        
                         
                       for (word in received$splitted) {
                         if (word %in% counts_tidy$splitted) {
-                          start_prob_edgardPoe = start_prob_edgardPoe * counts_tidy[which(counts_tidy$splitted == word), 6]
-                        }
-                        else {
-                          start_prob_edgardPoe = start_prob_edgardPoe * 1/(2 * nrow(counts_tidy))
-                        }
-                      }
+                          start_prob_edgardPoe = start_prob_edgardPoe * counts_tidy[which(counts_tidy$splitted == word), 7]
+                        }}
+                      
                         
                       for (word in received$splitted) {
                         if (word %in% counts_tidy$splitted) {
-                          start_prob_Wollstonecraft = start_prob_Wollstonecraft * counts_tidy[which(counts_tidy$splitted == word), 7]
-                        }
-                        else {
-                          start_prob_Wollstonecraft = start_prob_Wollstonecraft * 1/(2 * nrow(counts_tidy))
-                        }
-                      }
+                          start_prob_Wollstonecraft = start_prob_Wollstonecraft * counts_tidy[which(counts_tidy$splitted == word), 8]
+                        }}
                       
-                      start_prob_loveraft = start_prob_loveraft * prob_lovecraft
+                      start_prob_lovecraft = start_prob_lovecraft * prob_lovecraft
                       start_prob_edgardPoe = start_prob_edgardPoe * prob_edgardpoe
                       start_prob_Wollstonecraft = start_prob_Wollstonecraft * prob_Wollstonecraft
-                      #print(start_prob_Wollstonecraft)
-                      #print(start_prob_edgardPoe)
-                      #print(start_prob_loveraft)
                       
-                      if ((start_prob_loveraft >= start_prob_edgardPoe) & (start_prob_loveraft >= start_prob_Wollstonecraft))  {
+                      if ((start_prob_lovecraft > start_prob_edgardPoe) & (start_prob_lovecraft > start_prob_Wollstonecraft))  {
                         return ("HP Lovecraft")
                       }
-                      else if ((start_prob_edgardPoe > start_prob_loveraft) & (start_prob_edgardPoe >= start_prob_Wollstonecraft))  {
+                      else if ((start_prob_edgardPoe > start_prob_lovecraft) & (start_prob_edgardPoe > start_prob_Wollstonecraft))  {
                         return ("Edgar Alan Poe")
                       }
                       else {
                         return ("Mary Wollstonecraft Shelley")
                       }
+                      
                     },
                     
                     # score you test set so to get the understanding how well you model
@@ -304,6 +293,9 @@ naiveBayes <- setRefClass("naiveBayes",
                     }
 ))
 
+model = naiveBayes()
+
+model$fit(tidy_text)
 
 ```
 
@@ -315,13 +307,14 @@ naiveBayes <- setRefClass("naiveBayes",
 -   Show failure cases.
 
 ```{r}
-model = naiveBayes()
 
-model$fit(tidy_text)
+train_X <- train[1:1000, 3]
+train_Y <- train[1:1000, 4]
 test_X <- test[1:1000,3]
 
 test_Y <- test[1:1000,4]
-print(model$score(test_X, test_Y))
+
+print(model$score(train_X, train_Y))
 ```
 
 ## Conclusions
