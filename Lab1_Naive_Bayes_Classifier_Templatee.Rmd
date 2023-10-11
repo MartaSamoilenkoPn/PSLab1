@@ -237,7 +237,7 @@ naiveBayes <- setRefClass("naiveBayes",
                       message <- data.frame(Message = message)
                       received <- unnest_tokens(message, 'splitted', 'Message', token="words") %>%
              filter(!splitted %in% stop_words)
-                      print(received)
+                      
                       start_prob_loveraft = 1
                       start_prob_edgardPoe = 1
                       start_prob_Wollstonecraft = 1
@@ -318,9 +318,9 @@ naiveBayes <- setRefClass("naiveBayes",
 model = naiveBayes()
 
 model$fit(tidy_text)
-test_X <- test[,3]
+test_X <- test[1:1000,3]
 
-test_Y <- test[,4]
+test_Y <- test[1:1000,4]
 print(model$score(test_X, test_Y))
 ```
 
