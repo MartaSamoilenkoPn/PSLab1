@@ -286,7 +286,7 @@ naiveBayes <- setRefClass("naiveBayes",
                     score = function(X_test, y_test)
                     {
                          results <<- data_frame("texts", X_test)
-                         results <<- results %>% rowwise() %>% mutate(y_hat = predict(tweets))
+                         results <<- results %>% rowwise() %>% mutate(y_hat = predict(texts))
                          results <<- results 
                          results$y <<- y_test
                          
