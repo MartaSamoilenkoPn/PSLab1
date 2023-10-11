@@ -229,7 +229,53 @@ naiveBayes <- setRefClass("naiveBayes",
                     # return prediction for a single message 
                     predict = function(message)
                     {
-                         # TODO
+                      received = strsplit(message, split = " ")[[1]]
+                      received <- received[!received %in% splitted_stop_words]
+                      
+                      start_prob_loveraft = 1
+                      start_prob_edgardPoe = 1
+                      start_prob_Wollstonecraft = 1
+                      
+                      for (word in received) {
+                        if (word %in% count_tidy$splitted) {
+                          start_prob_loveraft = start_prob_loveraft * counts_tidy[which(counts_tidy$slitted == word), ]
+                        }
+                        else {
+                          start_prob_loveraft = start_prob_loveraft * 1/(2 * nrow(counts_tidy))
+                        }
+                      }
+                        
+                      for (word in received) {
+                        if (word %in% count_tidy$splitted) {
+                          start_prob_edgardPoe = start_prob_edgardPoe * counts_tidy[which(counts_tidy$slitted == word), ]
+                        }
+                        else {
+                          start_prob_edgardPoe = start_prob_edgardPoe * 1/(2 * nrow(counts_tidy))
+                        }
+                      }
+                        
+                      for (word in received) {
+                        if (word %in% count_tidy$splitted) {
+                          start_prob_Wollstonecraft = start_prob_Wollstonecraft * counts_tidy[which(counts_tidy$slitted == word), ]
+                        }
+                        else {
+                          start_prob_Wollstonecraft = start_prob_Wollstonecraft * 1/(2 * nrow(counts_tidy))
+                        }
+                      }
+                      
+                      start_prob_loveraft = start_prob_loveraft * prob_lovecraft
+                      start_prob_edgardPoe = start_prob_edgardPoe * prob_edgardpoe
+                      start_prob_Wollstonecraft = start_prob_Wollstonecraft * prog_Wollstonecraft
+                      
+                      if (start_prob_loveraft >= start_prob_edgardPoe & start_prob_loveraft >= start_prob_Wollstonecraft)  {
+                        return ("loveraft")
+                      }
+                      else if (start_prob_edgardPoe > start_prob_loveraft & start_prob_edgardPoe >= start_prob_Wollstonecraft)  {
+                        return ("edgardPoe")
+                      }
+                      else {
+                        return ("Wollstonecraft")
+                      }
                     },
                     
                     # score you test set so to get the understanding how well you model
