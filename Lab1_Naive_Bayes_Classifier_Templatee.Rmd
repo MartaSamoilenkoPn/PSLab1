@@ -168,32 +168,62 @@ naiveBayes <- setRefClass("naiveBayes",
                           
        # here it would be wise to have some vars to store intermediate result
        # frequency dict etc. Though pay attention to bag of words! 
-       fields = c(prob_lovecraft, prob_edgardpoe, prog_Wollstonecraft),
+       fields = c("counts_tidy", "prob_lovecraft", "prob_edgardpoe", "prob_Wollstonecraft"),
        methods = list(
                     # prepare your training data as X - bag of words for each of your
                     # messages and corresponding label for the message encoded as 0 or 1 
                     # (binary classification task)
                     fit = function(train_data)
                     {
-                      count_tidy <<- train_data %>% count(splitted,sort=TRUE)
+                      
+                      #count all number of row for each author
+                      counts_tidy <<- train_data %>% count(splitted,sort=TRUE)
                       n_overall <- nrow(train_data)
                       n_loveraft <- nrow(train_data %>% filter(train_data$author=="HP Lovecraft"))
                       n_edgardPoe <- nrow(train_data %>% filter(train_data$author=="Edgar Alan Poe"))
                       n_Wollstonecraft <- nrow(train_data %>% filter(train_data$author=="Mary Wollstonecraft Shelley "))
+                      
+                      #count probability for each author's rows
                       prob_lovecraft <<- n_loveraft / n_overall
                       prob_edgardpoe <<- n_edgardPoe / n_overall
                       prob_Wollstonecraft <<- n_Wollstonecraft / n_overall
                       
-                      tidy_lovecraft <- tidy_text %>% filter(tidy_text$label=="HP Lovecraft")
+                      #filter text of each author and cound all word
+                      tidy_lovecraft <- tidy_text %>% filter(tidy_text$author=="HP Lovecraft")
                       counts_lovecraft <- tidy_lovecraft %>% count(splitted, sort = TRUE)
                       
-                      tidy_edgardpoe <- tidy_text %>% filter(tidy_text$label=="Edgar Alan Poe")
+                      tidy_edgardpoe <- tidy_text %>% filter(tidy_text$author=="Edgar Alan Poe")
                       counts_edgardpoe <- tidy_edgardpoe %>% count(splitted, sort = TRUE)
                       
-                      tidy_wollstonecraft <- tidy_text %>% filter(tidy_text$label=="Mary Wollstonecraft Shelley")
+                      tidy_wollstonecraft <- tidy_text %>% filter(tidy_text$author=="Mary Wollstonecraft Shelley")
                       counts_wollstonecraft <- tidy_wollstonecraft %>% count(splitted, sort = TRUE)
                       
-                    
+                      #Merge count of each author with all text
+                      counts_tidy <<- merge(counts_lovecraft, counts_tidy, by = "splitted", all = TRUE)
+                      colnames(counts_tidy)[colnames(counts_tidy) == "n.x"] <<- "n_lovecraft"
+                      colnames(counts_tidy)[colnames(counts_tidy) == "n.y"] <<- "n_overall"
+                      counts_tidy <<- merge(counts_edgardpoe, counts_tidy, by = "splitted", all = TRUE)
+                      colnames(counts_tidy)[colnames(counts_tidy) == "n"] <<- "n_edgardPoe"
+                      counts_tidy <<- merge(counts_wollstonecraft, counts_tidy, by = "splitted", all = TRUE)
+                      colnames(counts_tidy)[colnames(counts_tidy) == "n"] <<- "n_Wollstonecraft"
+                      
+                      #for null counts_tidy set as 0
+                      counts_tidy[is.na(counts_tidy)] <<- 0
+                          
+                      #for each word add 1
+                      counts_tidy$n_lovecraft <<- counts_tidy$n_lovecraft + 1
+                      counts_tidy$n_edgardPoe <<- counts_tidy$n_edgardPoe + 1
+                      counts_tidy$n_Wollstonecraft <<- counts_tidy$n_Wollstonecraft + 1
+                      
+                      #Count sum of all words
+                      sum_lovecraft <- sum(counts_tidy $n_lovecraft)
+                      sum_edgardPoe <- sum(counts_tidy $n_edgardPoe)
+                      sum_Wollstonecraft <- sum(counts_tidy $n_Wollstonecraft)
+                      
+                      #Count its probability
+                      counts_tidy$probs_lovecraft <<- counts_tidy$n_lovecraft / sum_lovecraft
+                      counts_tidy$probs_edgardpoe <<- counts_tidy$n_edgardPoe / sum_edgardPoe
+                      counts_tidy$probs_Wollstonecraft <<- counts_tidy$n_Wollstonecraft / sum_Wollstonecraft
                     },
                     
                     # return prediction for a single message 
@@ -214,7 +244,11 @@ naiveBayes <- setRefClass("naiveBayes",
 ))
 
 model = naiveBayes()
-model$fit()
+model$counts_tidy <- NULL  # Initialize counts_tidy if it's a data frame
+model$prob_lovecraft <- 0
+model$prob_edgardpoe <- 0
+model$prob_Wollstonecraft <- 0
+model$fit(tidy_text)
 ```
 
 ## Measure effectiveness of your classifier
