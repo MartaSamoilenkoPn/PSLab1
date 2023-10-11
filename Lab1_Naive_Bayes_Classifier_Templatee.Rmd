@@ -310,6 +310,30 @@ model$fit(tidy_text)
 -   Visualize them.
 -   Show failure cases.
 
+``` {r}
+counts_tidy <<- tidy_text %>% count(splitted, sort = TRUE)
+
+n_overall <- nrow(tidy_text)
+
+n_loveraft <- nrow(tidy_text %>% filter(tidy_text$label=="HP Lovecraft"))
+n_edgardPoe <- nrow(tidy_text %>% filter(tidy_text$label=="Edgar Alan Poe"))
+n_Wollstonecraft <-nrow(tidy_text %>% filter(tidy_text$label=="Mary Wollstonecraft Shelley"))
+
+prob_tw_loveraft <<- n_loveraft/n_overall
+prob_tw_edgardPoe <<- n_edgardPoe/n_overall
+prob_tw_Wollstonecraft <<- n_Wollstonecraft/n_overall
+
+tidy_loveraft <- tidy_text %>% filter(tidy_text$label=="HP Lovecraft")
+tidy_edgardPoe <- tidy_text %>% filter(tidy_text$label=="Edgar Alan Poe")
+tidy_Wollstonecraft <- tidy_text %>% filter(tidy_text$label=="Mary Wollstonecraft Shelley")
+
+counts_loveraft <- tidy_loveraft %>% count(splitted, sort = TRUE)
+counts_edgardPoe <- tidy_edgardPoe %>% count(splitted, sort = TRUE)
+counts_Wollstonecraft <- tidy_Wollstonecraft %>% count(splitted, sort = TRUE)
+```
+
+
+
 ## Conclusions
 
 Summarize your work by explaining in a few sentences the points listed
