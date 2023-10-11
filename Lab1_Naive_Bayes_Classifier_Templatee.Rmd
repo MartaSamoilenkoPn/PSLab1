@@ -168,14 +168,32 @@ naiveBayes <- setRefClass("naiveBayes",
                           
        # here it would be wise to have some vars to store intermediate result
        # frequency dict etc. Though pay attention to bag of words! 
-       fields = list(),
+       fields = c(prob_lovecraft, prob_edgardpoe, prog_Wollstonecraft),
        methods = list(
                     # prepare your training data as X - bag of words for each of your
                     # messages and corresponding label for the message encoded as 0 or 1 
                     # (binary classification task)
-                    fit = function(X, y)
+                    fit = function(train_data)
                     {
-                         # TODO
+                      count_tidy <<- train_data %>% count(splitted,sort=TRUE)
+                      n_overall <- nrow(train_data)
+                      n_loveraft <- nrow(train_data %>% filter(train_data$author=="HP Lovecraft"))
+                      n_edgardPoe <- nrow(train_data %>% filter(train_data$author=="Edgar Alan Poe"))
+                      n_Wollstonecraft <- nrow(train_data %>% filter(train_data$author=="Mary Wollstonecraft Shelley "))
+                      prob_lovecraft <<- n_loveraft / n_overall
+                      prob_edgardpoe <<- n_edgardPoe / n_overall
+                      prob_Wollstonecraft <<- n_Wollstonecraft / n_overall
+                      
+                      tidy_lovecraft <- tidy_text %>% filter(tidy_text$label=="HP Lovecraft")
+                      counts_lovecraft <- tidy_lovecraft %>% count(splitted, sort = TRUE)
+                      
+                      tidy_edgardpoe <- tidy_text %>% filter(tidy_text$label=="Edgar Alan Poe")
+                      counts_edgardpoe <- tidy_edgardpoe %>% count(splitted, sort = TRUE)
+                      
+                      tidy_wollstonecraft <- tidy_text %>% filter(tidy_text$label=="Mary Wollstonecraft Shelley")
+                      counts_wollstonecraft <- tidy_wollstonecraft %>% count(splitted, sort = TRUE)
+                      
+                    
                     },
                     
                     # return prediction for a single message 
