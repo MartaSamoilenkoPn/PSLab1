@@ -238,7 +238,7 @@ naiveBayes <- setRefClass("naiveBayes",
                       
                       for (word in received) {
                         if (word %in% count_tidy$splitted) {
-                          start_prob_loveraft = start_prob_loveraft * counts_tidy[which(counts_tidy$slitted == word), ]
+                          start_prob_loveraft = start_prob_loveraft * counts_tidy[which(counts_tidy$slitted == word), 5]
                         }
                         else {
                           start_prob_loveraft = start_prob_loveraft * 1/(2 * nrow(counts_tidy))
@@ -247,7 +247,7 @@ naiveBayes <- setRefClass("naiveBayes",
                         
                       for (word in received) {
                         if (word %in% count_tidy$splitted) {
-                          start_prob_edgardPoe = start_prob_edgardPoe * counts_tidy[which(counts_tidy$slitted == word), ]
+                          start_prob_edgardPoe = start_prob_edgardPoe * counts_tidy[which(counts_tidy$slitted == word), 6]
                         }
                         else {
                           start_prob_edgardPoe = start_prob_edgardPoe * 1/(2 * nrow(counts_tidy))
@@ -256,7 +256,7 @@ naiveBayes <- setRefClass("naiveBayes",
                         
                       for (word in received) {
                         if (word %in% count_tidy$splitted) {
-                          start_prob_Wollstonecraft = start_prob_Wollstonecraft * counts_tidy[which(counts_tidy$slitted == word), ]
+                          start_prob_Wollstonecraft = start_prob_Wollstonecraft * counts_tidy[which(counts_tidy$slitted == word), 7]
                         }
                         else {
                           start_prob_Wollstonecraft = start_prob_Wollstonecraft * 1/(2 * nrow(counts_tidy))
