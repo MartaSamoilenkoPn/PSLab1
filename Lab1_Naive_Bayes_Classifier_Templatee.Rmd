@@ -87,6 +87,9 @@ library(tidytext)
 library(readr)
 library(dplyr)
 library(ggplot2)
+library(tokenizers)
+
+
 ```
 
 ## Outline of the work
@@ -148,8 +151,9 @@ test <-  read.csv(file = test_path, stringsAsFactors = FALSE)
 
 ```{r}
 # note the power functional features of R bring us! 
+train
 tidy_text <- unnest_tokens(train, 'splitted', 'text', token="words") %>%
-             filter(!splitted %in% stop_words)
+             filter(!splitted %in% splitted_stop_words)
 
 tidy_text %>% count(splitted,sort=TRUE)
 ```
@@ -168,38 +172,119 @@ naiveBayes <- setRefClass("naiveBayes",
                           
        # here it would be wise to have some vars to store intermediate result
        # frequency dict etc. Though pay attention to bag of words! 
-       fields = c(prob_lovecraft, prob_edgardpoe, prog_Wollstonecraft),
+       fields = c("counts_tidy", "prob_lovecraft", "prob_edgardpoe", "prob_Wollstonecraft", "results"),
        methods = list(
                     # prepare your training data as X - bag of words for each of your
                     # messages and corresponding label for the message encoded as 0 or 1 
                     # (binary classification task)
                     fit = function(train_data)
                     {
-                      count_tidy <<- train_data %>% count(splitted,sort=TRUE)
+                      
+                      #count all number of row for each author
+                      counts_tidy <<- train_data %>% count(splitted,sort=TRUE)
                       n_overall <- nrow(train_data)
                       n_loveraft <- nrow(train_data %>% filter(train_data$author=="HP Lovecraft"))
                       n_edgardPoe <- nrow(train_data %>% filter(train_data$author=="Edgar Alan Poe"))
                       n_Wollstonecraft <- nrow(train_data %>% filter(train_data$author=="Mary Wollstonecraft Shelley "))
+                      
+                      #count probability for each author's rows
                       prob_lovecraft <<- n_loveraft / n_overall
                       prob_edgardpoe <<- n_edgardPoe / n_overall
                       prob_Wollstonecraft <<- n_Wollstonecraft / n_overall
                       
-                      tidy_lovecraft <- tidy_text %>% filter(tidy_text$label=="HP Lovecraft")
+                      #filter text of each author and cound all word
+                      tidy_lovecraft <- tidy_text %>% filter(tidy_text$author=="HP Lovecraft")
                       counts_lovecraft <- tidy_lovecraft %>% count(splitted, sort = TRUE)
                       
-                      tidy_edgardpoe <- tidy_text %>% filter(tidy_text$label=="Edgar Alan Poe")
+                      tidy_edgardpoe <- tidy_text %>% filter(tidy_text$author=="Edgar Alan Poe")
                       counts_edgardpoe <- tidy_edgardpoe %>% count(splitted, sort = TRUE)
                       
-                      tidy_wollstonecraft <- tidy_text %>% filter(tidy_text$label=="Mary Wollstonecraft Shelley")
+                      tidy_wollstonecraft <- tidy_text %>% filter(tidy_text$author=="Mary Wollstonecraft Shelley")
                       counts_wollstonecraft <- tidy_wollstonecraft %>% count(splitted, sort = TRUE)
                       
-                    
+                      #Merge count of each author with all text
+                      counts_tidy <<- merge(counts_lovecraft, counts_tidy, by = "splitted", all = TRUE)
+                      colnames(counts_tidy)[colnames(counts_tidy) == "n.x"] <<- "n_lovecraft"
+                      colnames(counts_tidy)[colnames(counts_tidy) == "n.y"] <<- "n_overall"
+                      counts_tidy <<- merge(counts_edgardpoe, counts_tidy, by = "splitted", all = TRUE)
+                      colnames(counts_tidy)[colnames(counts_tidy) == "n"] <<- "n_edgardPoe"
+                      counts_tidy <<- merge(counts_wollstonecraft, counts_tidy, by = "splitted", all = TRUE)
+                      colnames(counts_tidy)[colnames(counts_tidy) == "n"] <<- "n_Wollstonecraft"
+                      
+                      #for null counts_tidy set as 0
+                      counts_tidy[is.na(counts_tidy)] <<- 0
+                          
+                      #for each word add 1
+                      counts_tidy$n_lovecraft <<- counts_tidy$n_lovecraft + 1
+                      counts_tidy$n_edgardPoe <<- counts_tidy$n_edgardPoe + 1
+                      counts_tidy$n_Wollstonecraft <<- counts_tidy$n_Wollstonecraft + 1
+                      
+                      #Count sum of all words
+                      sum_lovecraft <- sum(counts_tidy $n_lovecraft)
+                      sum_edgardPoe <- sum(counts_tidy $n_edgardPoe)
+                      sum_Wollstonecraft <- sum(counts_tidy $n_Wollstonecraft)
+                      
+                      #Count its probability
+                      
+                      counts_tidy$probs_lovecraft <<- counts_tidy$n_lovecraft / sum_lovecraft
+                      counts_tidy$probs_edgardpoe <<- counts_tidy$n_edgardPoe / sum_edgardPoe
+                      counts_tidy$probs_Wollstonecraft <<- counts_tidy$n_Wollstonecraft / sum_Wollstonecraft
                     },
                     
                     # return prediction for a single message 
                     predict = function(message)
                     {
-                         # TODO
+                      message <- data.frame(Message = message)
+                      received <- unnest_tokens(message, 'splitted', 'Message', token="words") %>%
+             filter(!splitted %in% splitted_stop_words)
+                      
+                      start_prob_loveraft = 1
+                      start_prob_edgardPoe = 1
+                      start_prob_Wollstonecraft = 1
+                      
+                      for (word in received$splitted) {
+                        if (word %in% counts_tidy$splitted) {
+                          start_prob_loveraft = start_prob_loveraft * counts_tidy[which(counts_tidy$splitted == word), 5]
+                        }
+                        else {
+                          start_prob_loveraft = start_prob_loveraft * 1/(2 * nrow(counts_tidy))
+                        }
+                      }
+                        
+                      for (word in received$splitted) {
+                        if (word %in% counts_tidy$splitted) {
+                          start_prob_edgardPoe = start_prob_edgardPoe * counts_tidy[which(counts_tidy$splitted == word), 6]
+                        }
+                        else {
+                          start_prob_edgardPoe = start_prob_edgardPoe * 1/(2 * nrow(counts_tidy))
+                        }
+                      }
+                        
+                      for (word in received$splitted) {
+                        if (word %in% counts_tidy$splitted) {
+                          start_prob_Wollstonecraft = start_prob_Wollstonecraft * counts_tidy[which(counts_tidy$splitted == word), 7]
+                        }
+                        else {
+                          start_prob_Wollstonecraft = start_prob_Wollstonecraft * 1/(2 * nrow(counts_tidy))
+                        }
+                      }
+                      
+                      start_prob_loveraft = start_prob_loveraft * prob_lovecraft
+                      start_prob_edgardPoe = start_prob_edgardPoe * prob_edgardpoe
+                      start_prob_Wollstonecraft = start_prob_Wollstonecraft * prob_Wollstonecraft
+                      #print(start_prob_Wollstonecraft)
+                      #print(start_prob_edgardPoe)
+                      #print(start_prob_loveraft)
+                      
+                      if ((start_prob_loveraft >= start_prob_edgardPoe) & (start_prob_loveraft >= start_prob_Wollstonecraft))  {
+                        return ("HP Lovecraft")
+                      }
+                      else if ((start_prob_edgardPoe > start_prob_loveraft) & (start_prob_edgardPoe >= start_prob_Wollstonecraft))  {
+                        return ("Edgar Alan Poe")
+                      }
+                      else {
+                        return ("Mary Wollstonecraft Shelley")
+                      }
                     },
                     
                     # score you test set so to get the understanding how well you model
@@ -209,8 +294,8 @@ naiveBayes <- setRefClass("naiveBayes",
                     # try how well your model generalizes to real world data! 
                     score = function(X_test, y_test)
                     {
-                         results <<- data_frame("texts", X_test)
-                         results <<- results %>% rowwise() %>% mutate(y_hat = predict(tweets))
+                         results <<- data.frame(texts = X_test)
+                         results <<- results %>% rowwise() %>% mutate(y_hat = predict(texts))
                          results <<- results 
                          results$y <<- y_test
                          
@@ -219,8 +304,7 @@ naiveBayes <- setRefClass("naiveBayes",
                     }
 ))
 
-model = naiveBayes()
-model$fit()
+
 ```
 
 ## Measure effectiveness of your classifier
@@ -229,6 +313,16 @@ model$fit()
     Look at precision and recall curves, F1 score metric.
 -   Visualize them.
 -   Show failure cases.
+
+```{r}
+model = naiveBayes()
+
+model$fit(tidy_text)
+test_X <- test[1:1000,3]
+
+test_Y <- test[1:1000,4]
+print(model$score(test_X, test_Y))
+```
 
 ## Conclusions
 
@@ -240,3 +334,91 @@ below.
 -   List pros and cons of the method. This should include the
     limitations of your method, all the assumption you make about the
     nature of your data etc.
+
+```{r}
+counts_tidy <<- tidy_text %>% count(splitted, sort = TRUE)
+
+n_overall <- nrow(tidy_text)
+
+n_loveraft <- nrow(tidy_text %>% filter(tidy_text$author=="HP Lovecraft"))
+n_edgardPoe <- nrow(tidy_text %>% filter(tidy_text$author=="Edgar Alan Poe"))
+n_Wollstonecraft <- nrow(tidy_text %>% filter(tidy_text$author== "Mary Wollstonecraft Shelley"))
+
+prob_tw_loveraft <<- n_loveraft/n_overall
+prob_tw_edgardPoe <<- n_edgardPoe/n_overall
+prob_tw_Wollstonecraft <<- n_Wollstonecraft/n_overall
+
+tidy_loveraft <- tidy_text %>% filter(tidy_text$author=="HP Lovecraft")
+tidy_edgardPoe <- tidy_text %>% filter(tidy_text$author=="Edgar Alan Poe")
+tidy_Wollstonecraft <- tidy_text %>% filter(tidy_text$author=="Mary Wollstonecraft Shelley")
+
+counts_loveraft <- tidy_loveraft %>% count(splitted, sort = TRUE)
+counts_edgardPoe <- tidy_edgardPoe %>% count(splitted, sort = TRUE)
+counts_Wollstonecraft <- tidy_Wollstonecraft %>% count(splitted, sort = TRUE)
+
+ggplot(head(tidy_loveraft %>% count(splitted, sorted=TRUE), 50)) +
+  geom_col(aes(x = splitted, y = n), 
+            color = 'darkgreen') +
+  
+  ggtitle("Basic Plot") +
+  xlab("words") +
+  ylab("NUMBER") +
+  theme_bw() +
+  theme(axis.text.x = element_text(face = 'bold', size = 10, angle=90),
+        axis.text.y = element_text(face = 'bold', size = 10))
+
+```
+
+```{r}
+
+ggplot(head(tidy_edgardPoe %>% count(splitted, sorted=TRUE), 50)) +
+  geom_col(aes(x = splitted, y = n), 
+            color = 'darkgreen') +
+  
+  ggtitle("Basic Plot") +
+  xlab("words") +
+  ylab("NUMBER") +
+  theme_bw() +
+  theme(axis.text.x = element_text(face = 'bold', size = 10, angle=90),
+        axis.text.y = element_text(face = 'bold', size = 10))
+```
+
+```{r}
+print(n_Wollstonecraft)
+```
+
+```{r}
+ggplot(head(tidy_Wollstonecraft %>% count(splitted, sorted=TRUE), 50)) +
+  geom_col(aes(x = splitted, y = n), 
+            color = 'darkgreen') +
+  
+  ggtitle("Basic Plot") +
+  xlab("words") +
+  ylab("NUMBER") +
+  theme_bw() +
+  theme(axis.text.x = element_text(face = 'bold', size = 10, angle=90),
+        axis.text.y = element_text(face = 'bold', size = 10))
+```
+
+```{r}
+train_data <- data.frame(group = c("HP Lovecraft", "Edgar Alan Poe", "Mary Wollstonecraft Shelley"), 
+                        number_of_words = c(nrow(train %>% filter(author =="HP Lovecraft")), nrow(train %>% filter(author == "Edgar Alan Poe")), nrow(train %>% filter(author =="Mary Wollstonecraft Shelley"))))
+
+ggplot(train_data, aes(x="trained\ndata\nred-lovecraft\ngreen-alan\nyellow-mary", y=number_of_words,fill=group)) +
+                        geom_bar(stat="identity", color='green', fill=c( 'red','green', 'yellow'),width=20) +
+                        coord_polar("y", start=100)
+
+#after training:
+
+test_data <- data.frame(group = c("HP Lovecraft", "Edgar Alan Poe", "Mary Wollstonecraft Shelley"), 
+                        number_of_words = c(nrow(train %>% filter(author =="HP Lovecraft")), nrow(train %>% filter(author == "Edgar Alan Poe")), nrow(train %>% filter(author =="Mary Wollstonecraft Shelley"))))
+
+ggplot(train_data, aes(x="trained\ndata\nred-lovecraft\ngreen-alan\nyellow-mary", y=number_of_words, fill=group)) +
+                        geom_bar(stat="identity", color='green', fill=c('red','green', 'yellow'),width=20) +
+                        coord_polar("y", start=100)
+```
+
+```{r}
+var <- model$results
+print(var[which(var$successful== 0), 1])
+```
