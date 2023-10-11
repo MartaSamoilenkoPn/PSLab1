@@ -285,7 +285,13 @@ naiveBayes <- setRefClass("naiveBayes",
                     # try how well your model generalizes to real world data! 
                     score = function(X_test, y_test)
                     {
-                         # TODO
+                         results <<- data_frame("texts", X_test)
+                         results <<- results %>% rowwise() %>% mutate(y_hat = predict(tweets))
+                         results <<- results 
+                         results$y <<- y_test
+                         
+                         results <<- results %>% mutate(successful = if_else(y_hat == y, 1, 0))
+                         return(sum(results$successful)/nrow(results))
                     }
 ))
 
